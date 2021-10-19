@@ -1197,10 +1197,10 @@ EOD;
     }
 
     if ($need_ddns_updates) {
-        $dhcpdconf .= "\n"
+        $dhcpdconf .= "\n";
         $dhcpdconf .= "ddns-update-style interim;\n";
         $dhcpdconf .= "update-static-leases on;\n";
-        $dhcpdconf .= "\n"
+        $dhcpdconf .= "\n";
         $dhcpdconf .= dhcpd_zones($ddns_zones);
     }
 
