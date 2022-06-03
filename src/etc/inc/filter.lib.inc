@@ -275,6 +275,13 @@ function filter_core_rules_system($fw, $defaults)
         );
     }
     // CARP defaults
+    $carp_disabled = empty($config['hasync']) && empty($config['virtualip']['vip']);
+    $fw->registerFilterRule(
+        1,
+        array('protocol' => 'carp', 'descr' => 'CARP defaults', '#ref' => 'system_hasync.php',
+            'from' => '(self)', 'direction' => 'in', 'disabled' => !$carp_disabled),
+        $defaults['block']
+    );
     $fw->registerFilterRule(
         1,
         array('protocol' => 'carp', 'direction' => 'any', 'descr' => 'CARP defaults', '#ref' => 'firewall_virtual_ip.php'),
@@ -541,7 +548,7 @@ function filter_core_rules_system($fw, $defaults)
         $fw->registerFilterRule(
             5,
             array('direction' => 'out', 'statetype' => 'keep', 'quick' => false, 'interface' => 'enc0',
-                '#ref' => '/ui/ipsec/tunnels',
+                '#ref' => 'vpn_ipsec.php#enable',
                 'descr' => 'IPsec internal host to host'),
             $defaults['pass']
         );
@@ -587,29 +594,33 @@ function filter_core_rules_system($fw, $defaults)
     if (empty($config['system']['pf_disable_force_gw'])) {
         foreach ($fw->getInterfaceMapping() as $ifdescr => $ifcfg) {
             if (!isset($ifcfg['internal_dynamic']) && $ifcfg['if'] != 'lo0') {
-                $protos_found = [];
-                $address_check = ['inet' => 'is_subnetv4', 'inet6' => 'is_subnetv6'];
+                $intf_has_v4 = false;
+                $intf_has_v6 = false;
                 foreach (array_keys(interfaces_addresses($ifcfg['if'], true, $fw->getIfconfigDetails())) as $addr) {
-                    foreach (['inet', 'inet6'] as $inet) {
-                        if (!in_array($inet, $protos_found) && $address_check[$inet]($addr)) {
-                            $gwname = $fw->getGateways()->getInterfaceGateway($ifdescr, $inet, true, 'name');
-                            if (!empty($gwname)) {
-                                // only try to add gateway rules for traffic leaving this interface
-                                // when the correct protocol is assigned to the interface
-                                $fw->registerFilterRule(
-                                    100000,
-                                    array('from' => "({$ifcfg['if']})", 'direction' => 'out', 'gateway' => $gwname,
-                                    'destination' => array('network' => $ifdescr, "not" => true),
-                                    'statetype' => 'keep',
-                                    'allowopts' => true,
-                                    'quick' => false,
-                                    '#ref' => 'system_advanced_firewall.php#pf_disable_force_gw',
-                                    'descr' => "let out anything from firewall host itself (force gw)"),
-                                    $defaults['pass']
-                                );
-                            }
-                            $protos_found[] = $inet;
-                        }
+                    $intf_has_v4 = $intf_has_v4 || is_subnetv4($addr);
+                    $intf_has_v6 = $intf_has_v6 || is_subnetv6($addr);
+                }
+                foreach ($fw->getInterfaceGateways($ifcfg['if']) as $gwname) {
+                    $gwcfg = $fw->getGateway($gwname);
+                    if (empty($gwcfg['gateway'])) {
+                        // XXX: only force traffic on explict gateway [address] selection,
+                        //      exclude gateway_interface types.
+                        continue;
+                    }
+                    // only try to add gateway rules for traffic leaving this interface
+                    // when the correct protocol is assigned to the interface
+                    if (($gwcfg['proto'] == 'inet' && $intf_has_v4) || ($gwcfg['proto'] == 'inet6' && $intf_has_v6)) {
+                        $fw->registerFilterRule(
+                            100000,
+                            array('from' => "({$ifcfg['if']})", 'direction' => 'out', 'gateway' => $gwname,
+                            'destination' => array('network' => $ifdescr, "not" => true),
+                            'statetype' => 'keep',
+                            'allowopts' => true,
+                            'quick' => false,
+                            '#ref' => 'system_advanced_firewall.php#pf_disable_force_gw',
+                            'descr' => "let out anything from firewall host itself (force gw)"),
+                            $defaults['pass']
+                        );
                     }
                 }
             }

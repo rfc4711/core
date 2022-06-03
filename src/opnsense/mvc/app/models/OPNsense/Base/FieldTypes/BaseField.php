@@ -366,7 +366,7 @@ abstract class BaseField
      */
     public function isFieldChanged()
     {
-        return $this->internalInitialValue !== $this->internalValue;
+        return $this->internalInitialValue !==  $this->internalValue;
     }
 
     /**
@@ -589,7 +589,7 @@ abstract class BaseField
      */
     public function getNodeData()
     {
-        return (string)$this;
+        return $this->__toString();
     }
 
 

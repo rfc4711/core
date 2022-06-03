@@ -186,10 +186,6 @@ EOF;
                 continue;
             }
 
-            if (!$info['bind']) {
-                continue;
-            }
-
             $addresses[] = $tmpaddr;
         }
 
@@ -263,7 +259,6 @@ EOF;
     }
 
     $forward_conf = '';
-    $forward_local = '';
     if (isset($config['unbound']['forwarding'])) {
         $dnsservers = array();
 
@@ -287,15 +282,10 @@ forward-zone:
 
 EOD;
             foreach ($dnsservers as $dnsserver) {
-                if (strpos($dnsserver, '127.') === 0 || $dnsserver == '::1') {
-                    $forward_local = "do-not-query-localhost: no\n";
-                }
                 $forward_conf .= "\tforward-addr: $dnsserver\n";
             }
         }
     }
-
-    $so_reuseport = empty(system_sysctl_get()['net.inet.rss.enabled']) ? 'yes' : 'no';
 
     $unboundconf = <<<EOD
 ##########################
@@ -324,7 +314,7 @@ do-ip6: {$do_ip6}
 do-udp: yes
 do-tcp: yes
 do-daemonize: yes
-so-reuseport: ${so_reuseport}
+so-reuseport: yes
 module-config: "{$module_config}"
 cache-max-ttl: {$cache_max_ttl}
 cache-min-ttl: {$cache_min_ttl}
@@ -348,7 +338,6 @@ rrset-cache-size: {$rrsetcachesize}m
 {$optimization['so_rcvbuf']}
 {$qnameminstrict}
 {$anchor_file}
-{$forward_local}
 {$dns64prefix}
 prefetch: {$prefetch}
 prefetch-key: {$prefetch_key}
@@ -450,7 +439,6 @@ function unbound_add_domain_overrides($pvt = false)
     });
 
     $result = array();
-    $forward_local = '';
 
     foreach ($domains as $domain) {
         $domain_key = current($domain);
@@ -473,9 +461,6 @@ function unbound_add_domain_overrides($pvt = false)
             $domain_entries .= "forward-zone:\n";
             $domain_entries .= "\tname: \"$domain\"\n";
             foreach ($ips as $ip) {
-                if (strpos($ip, '127.') === 0 || $ip == '::1') {
-                    $forward_local = "server:\n\tdo-not-query-localhost: no\n";
-                }
                 $domain_entries .= "\tforward-addr: $ip\n";
             }
         }
@@ -484,7 +469,6 @@ function unbound_add_domain_overrides($pvt = false)
     if ($pvt == true) {
         return $domain_entries;
     } else {
-        $domain_entries .= $forward_local;
         file_put_contents('/var/unbound/domainoverrides.conf', $domain_entries);
     }
 }
@@ -519,8 +503,11 @@ function unbound_add_host_entries($ifconfig_details = null)
             continue;
         }
 
-        list ($laddr) = interfaces_primary_address($interface, $ifconfig_details);
-        if (!empty($laddr)) {
+        $realifv4 = get_real_interface($interface);
+        $realifv6 = get_real_interface($interface, 'inet6');
+
+        $laddr = find_interface_ip($realifv4, $ifconfig_details);
+        if (is_ipaddrv4($laddr)) {
             $domain = $config['system']['domain'];
             if (isset($config['dhcpd'][$interface]['enable']) && !empty($config['dhcpd'][$interface]['domain'])) {
                 $domain = $config['dhcpd'][$interface]['domain'];
@@ -529,8 +516,8 @@ function unbound_add_host_entries($ifconfig_details = null)
             $unbound_entries .= "local-data: \"{$config['system']['hostname']}.{$domain} A {$laddr}\"\n";
             $unbound_entries .= "local-data: \"{$config['system']['hostname']} A {$laddr}\"\n";
         }
-        list ($laddr6) = interfaces_primary_address6($interface, $ifconfig_details);
-        if (!empty($laddr6)) {
+        $laddr6 = find_interface_ipv6($realifv6, $ifconfig_details);
+        if (is_ipaddrv6($laddr6)) {
             $domain = $config['system']['domain'];
             if (isset($config['dhcpdv6'][$interface]['enable']) && !empty($config['dhcpdv6'][$interface]['domain'])) {
                 $domain = $config['dhcpdv6'][$interface]['domain'];
@@ -540,10 +527,8 @@ function unbound_add_host_entries($ifconfig_details = null)
             $unbound_entries .= "local-data: \"{$config['system']['hostname']} AAAA {$laddr6}\"\n";
         }
         if (empty($config['unbound']['noreglladdr6'])) {
-            list ($lladdr6) = interfaces_scoped_address6($interface, $ifconfig_details);
-            if (!empty($lladdr6)) {
-                /* cannot embed scope */
-                $lladdr6 = explode('%', $lladdr6)[0];
+            $lladdr6 = find_interface_ipv6_ll($realifv6, $ifconfig_details);
+            if (is_ipaddrv6($lladdr6)) {
                 $domain = $config['system']['domain'];
                 if (isset($config['dhcpdv6'][$interface]['enable']) && !empty($config['dhcpdv6'][$interface]['domain'])) {
                     $domain = $config['dhcpdv6'][$interface]['domain'];
@@ -687,10 +672,6 @@ function unbound_acls_subnets()
     $subnets = array('127.0.0.1/8', '::1/64');
 
     foreach (interfaces_addresses(array_keys($active_interfaces), true) as $subnet => $info) {
-        if (!$info['bind']) {
-            continue;
-        }
-
         if (!empty($active_interfaces[$info['name']]['net4']) && is_subnetv4($subnet)) {
             $subnet = explode('/', $subnet)[0] . '/' . $active_interfaces[$info['name']]['net4'];
         } elseif (!empty($active_interfaces[$info['name']]['net6']) && is_subnetv6($subnet) && !$info['scope']) {

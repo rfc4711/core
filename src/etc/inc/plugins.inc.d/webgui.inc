@@ -77,10 +77,6 @@ function webgui_configure_do($verbose = false, $interface = '')
             continue;
         }
 
-        if (!$info['bind']) {
-            continue;
-        }
-
         $listeners[] = $tmpaddr;
     }
 
@@ -268,7 +264,7 @@ EOD;
 ############ Options you really have to take care of ####################
 
 ## modules to load
-server.modules              = (
+server.modules              =   (
   "mod_access", "mod_expire", "mod_deflate", "mod_redirect", "mod_setenv",
   "mod_cgi", "mod_fastcgi", "mod_alias", "mod_rewrite", "mod_openssl" {$lighty_modules}
 )

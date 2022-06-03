@@ -84,9 +84,6 @@ POSSIBILITY OF SUCH DAMAGE.
                             });
                         });
                     });
-                    $(this).find(".bootgrid-tooltip").each(function (index) {
-                        $(this).tooltip();
-                    });
                 });
             }
             ajaxGet("/api/captiveportal/session/list/"+zoneid+"/", {}, function(data, status) {
@@ -98,6 +95,7 @@ POSSIBILITY OF SUCH DAMAGE.
                         $.each(data[i], function(key, value) {
                             record[key] = value !== null  ? value : "";
                         });
+                        record['startTime'] = moment(parseInt(record['startTime'])*1000);
                         table.push(record);
                     }
                     $("#grid-clients").bootgrid('append', table);

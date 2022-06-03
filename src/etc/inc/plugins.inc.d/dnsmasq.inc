@@ -132,10 +132,6 @@ function dnsmasq_configure_do($verbose = false)
                 continue;
             }
 
-            if (!$info['bind']) {
-                continue;
-            }
-
             $addresses[] = $tmpaddr;
         }
 
@@ -267,8 +263,8 @@ function _dnsmasq_dhcpleases_start()
 {
     global $config;
 
-    /* XXX this code is going away soon enough */
-    $leases = '/var/dhcpd/var/db/dhcpd.leases';
+    require_once 'plugins.inc.d/dhcpd.inc';  /* XXX */
+    $leases = dhcpd_dhcpv4_leasesfile();
 
     if (isset($config['dnsmasq']['regdhcp']) && file_exists($leases)) {
         $domain = $config['system']['domain'];

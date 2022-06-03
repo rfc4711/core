@@ -100,21 +100,9 @@ class FirmwareController extends ApiControllerBase
             $backend->configdRun('firmware probe');
         }
 
-        $product = json_decode(trim($backend->configdRun('firmware product')), true);
-        if ($product == null) {
-            $response = [
-                'status_msg' => gettext('Firmware status check was aborted internally. Please try again.'),
-                'status' => 'error',
-            ];
-        } elseif ($product['product_check'] == null) {
-            $response = [
-                'product' => $product,
-                'status_msg' => gettext('Firmware status requires to check for update first to provide more information.'),
-                'status' => 'none',
-            ];
-        } else {
-            $response = $product['product_check'];
-            $response['product'] = $product;
+        $response = json_decode(trim($backend->configdRun('firmware product')), true);
+        if ($response != null && $response['product_check'] != null) {
+            $response = $response['product_check'];
 
             $download_size = !empty($response['download_size']) ? $response['download_size'] : 0;
 
@@ -222,7 +210,6 @@ class FirmwareController extends ApiControllerBase
             $active_array = &$response['all_packages'];
             $active_size = $update_size;
             $active_status = 'update';
-            $active_reboot = '0';
 
             $sorted = [];
 
@@ -300,18 +287,13 @@ class FirmwareController extends ApiControllerBase
                         $this->formatBytes($active_size)
                     );
                 }
-                if (
-                    ($active_status == 'update' && $response['needs_reboot'] == 1) ||
-                    ($active_status == 'upgrade' && $response['upgrade_needs_reboot'] == 1)
-                ) {
-                    $active_reboot = '1';
+                if ($response['upgrade_needs_reboot'] == 1) {
                     $response['status_msg'] = sprintf(
                         '%s %s',
                         $response['status_msg'],
                         gettext('This update requires a reboot.')
                     );
                 }
-                $response['status_reboot'] = $active_reboot;
                 $response['status'] = $active_status;
             } elseif (!$active_count) {
                 $response['status_msg'] = gettext('There are no updates available on the selected mirror.');
@@ -320,6 +302,11 @@ class FirmwareController extends ApiControllerBase
                 $response['status_msg'] = gettext('Unknown firmware status encountered.');
                 $response['status'] = 'error';
             }
+        } else {
+            $response = array(
+                'status_msg' => gettext('Firmware status check was aborted internally. Please try again.'),
+                'status' => 'error',
+            );
         }
 
         return $response;

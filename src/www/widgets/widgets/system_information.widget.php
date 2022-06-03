@@ -264,6 +264,7 @@ require_once("system.inc");
           </div>
           <div class="swap_devices">
           </div>
+        </DIV>
       </td>
     </tr>
     <tr id="system_information_widget_disk_info">

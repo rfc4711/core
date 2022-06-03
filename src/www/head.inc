@@ -128,8 +128,7 @@ $pagetitle .= html_safe(sprintf(' | %s.%s', $config['system']['hostname'], $conf
     //<![CDATA[
     $( document ).ready(function() {
       $('[data-toggle="tooltip"]').tooltip();
-      $("input").not("[autocomplete]").attr("autocomplete","off");
-
+      $("input").attr("autocomplete","off");
       // hide empty menu items
       $('#mainmenu > div > .collapse').each(function(){
         // cleanup empty second level menu containers

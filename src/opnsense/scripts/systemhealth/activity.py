@@ -39,16 +39,9 @@ if __name__ == '__main__':
     fieldnames = None
     field_max_width = dict()
     result = {'headers': [], 'details': []}
+    sp = subprocess.run(['/usr/bin/top','-aHSn','999999'], capture_output=True, text=True)
     is_header = True
-    tidpid = dict()
-    for line in subprocess.run(['/usr/bin/procstat','-ath'], capture_output=True, text=True).stdout.split('\n'):
-        parts = line.split(maxsplit=2)
-        if len(parts) > 1:
-            tidpid[parts[1]] = parts[0]
-    # grab second display so that CPU time data appears
-    sp = subprocess.run(['/usr/bin/top','-aHSTn','-d2','999999'], capture_output=True, text=True)
-    topData = sp.stdout.strip().split('\n\n',2)[-1]
-    for line in topData.split('\n'):
+    for line in sp.stdout.strip().split('\n'):
         # end of header, start of top detection
         if line.find('USERNAME') > -1 and line.find('COMMAND') > -1:
             is_header = False
@@ -59,16 +52,16 @@ if __name__ == '__main__':
         else:
             # parse details including fieldnames (leave original)
             if fieldnames is None:
-                fieldnames = ['PID'] + line.split()
+                fieldnames = line.split()
             else:
-                tmp = line.split(maxsplit=10)
+                tmp = line.split()
                 record = {'C': '0'}
                 for field_id in range(len(fieldnames)):
                     fieldname = fieldnames[field_id]
-                    if field_id == 0:  # PID
-                        record[fieldname] = tidpid[tmp[0]] if tmp[0] in tidpid else ''
+                    if field_id == len(fieldnames)-1:
+                        record[fieldname] = ' '.join(tmp[field_id:])
                     else:
-                        record[fieldname] = tmp[field_id - 1]
+                        record[fieldname] = tmp[field_id]
 
                     if fieldname not in field_max_width or field_max_width[fieldname] < len(record[fieldname]):
                         field_max_width[fieldname] = len(record[fieldname])

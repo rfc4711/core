@@ -189,7 +189,7 @@
             <Aliases url="/ui/firewall/alias_util/"/>
             <States url="/ui/diagnostics/firewall/states"/>
             <Sessions url="/ui/diagnostics/firewall/pf_top"/>
-            <Statistics url="/ui/diagnostics/firewall/statistics"/>
+            <pfInfo url="/diag_pf_info.php"/>
         </Diagnostics>
         <LogFiles order="400" VisibleName="Log Files" cssClass="fa fa-eye fa-fw">
             <Live VisibleName="Live View" url="/ui/diagnostics/firewall/log"/>

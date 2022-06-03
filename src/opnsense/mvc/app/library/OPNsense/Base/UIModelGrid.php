@@ -123,7 +123,7 @@ class UIModelGrid
 
                 // parse rows, because we may need to convert some (list) items we need to know the actual content
                 // before searching.
-                $row = [];
+                $row =  array();
                 $row['uuid'] = $record->getAttributes()['uuid'];
                 foreach ($fields as $fieldname) {
                     if ($record->$fieldname != null) {
@@ -150,10 +150,7 @@ class UIModelGrid
                 if ($searchPhrase != '') {
                     $searchFound = false;
                     foreach ($fields as $fieldname) {
-                        if (
-                            isset($row[$fieldname]) &&
-                            strpos(strtolower($row[$fieldname]), strtolower($searchPhrase)) !== false
-                        ) {
+                        if (strpos(strtolower($row[$fieldname]), strtolower($searchPhrase)) !== false) {
                             $searchFound = true;
                             break;
                         }

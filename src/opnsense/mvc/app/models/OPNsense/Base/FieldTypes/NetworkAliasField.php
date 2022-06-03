@@ -51,7 +51,7 @@ class NetworkAliasField extends BaseListField
     public function getNodeData()
     {
         // XXX: don't use as list, only for validation
-        return (string)$this;
+        return $this->__toString();
     }
 
     /**
@@ -62,7 +62,7 @@ class NetworkAliasField extends BaseListField
         if ($this->internalValidationMessage == null) {
             return sprintf(
                 gettext("%s is not a valid source IP address or alias."),
-                (string)$this
+                $this->__toString()
             );
         } else {
             return $this->internalValidationMessage;
@@ -117,9 +117,9 @@ class NetworkAliasField extends BaseListField
      */
     public function getValidators()
     {
-        if (Util::isIpAddress((string)$this) || Util::isSubnet((string)$this)) {
+        if (Util::isIpAddress($this->__toString()) || Util::isSubnet($this->__toString())) {
             // add to option list if input is a valid network or host
-            $this->internalOptionList[(string)$this] = (string)$this;
+            $this->internalOptionList[$this->__toString()] = $this->__toString();
         }
         return parent::getValidators();
     }

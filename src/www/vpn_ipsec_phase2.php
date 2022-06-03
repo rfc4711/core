@@ -450,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         write_config();
         mark_subsystem_dirty('ipsec');
 
-        header(url_safe('Location: /ui/ipsec/tunnels'));
+        header(url_safe('Location: /vpn_ipsec.php'));
         exit;
     }
 }

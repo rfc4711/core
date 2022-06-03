@@ -37,8 +37,6 @@ GITVERSION=	${.CURDIR}/Scripts/version.sh
 _CORE_ARCH!=	uname -p
 CORE_ARCH?=	${_CORE_ARCH}
 
-CORE_MAKE=	${MAKE}
-
 OPENSSL=	${LOCALBASE}/bin/openssl
 
 .if ! defined(CORE_FLAVOUR)
@@ -73,8 +71,8 @@ CORE_PYTHON?=	${_CORE_PYTHON:[2]:S/./ /g:[1..2]:tW:S/ //}
 .endif
 
 .if exists(${PKG})
-_CORE_SYSLOGNG!=${PKG} query %v syslog-ng
-CORE_SYSLOGNG?=	${_CORE_SYSLOGNG:S/./ /g:[1..2]:tW:S/ /./g}
+_CORE_SYSLOGNG!= ${PKG} query %v syslog-ng
+CORE_SYSLOGNG?=  ${_CORE_SYSLOGNG:S/./ /g:[1..2]:tW:S/ /./g}
 .endif
 
 REPLACEMENTS=	CORE_ABI \

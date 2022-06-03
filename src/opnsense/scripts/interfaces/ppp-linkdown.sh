@@ -12,6 +12,11 @@ DEFAULTGW=$(route -n get -${AF} default | grep gateway: | awk '{print $2}')
 ngctl shutdown ${IF}:
 
 if [ "${AF}" = "inet" ]; then
+	if [ -f /tmp/${IF}up -a -f /conf/${IF}.log ]; then
+		seconds=$((`date -j +%s` - `/usr/bin/stat -f %m /tmp/${IF}up`))
+		/usr/local/opnsense/scripts/interfaces/ppp-log-uptime.sh $seconds ${IF} &
+	fi
+
 	if [ -s "/tmp/${IF}_defaultgw" ]; then
 		GW=$(head -n 1 /tmp/${IF}_defaultgw)
 	fi
@@ -20,33 +25,35 @@ if [ "${AF}" = "inet" ]; then
 		route delete -${AF} default "${GW}"
 	fi
 
-	if [ -f "/tmp/${IF}_nameserver" ]; then
+	if [ -f "/var/etc/nameserver_${IF}" ]; then
 		# Remove old entries
-		for nameserver in $(cat /tmp/${IF}_nameserver); do
+		for nameserver in $(cat /var/etc/nameserver_${IF}); do
 			route delete ${nameserver}
 		done
-		rm -f /tmp/${IF}_nameserver
+		rm -f /var/etc/nameserver_${IF}
 	fi
 
-	rm -f /tmp/${IF}_router
+	# Do not remove gateway used during filter reload.
+	rm -f /tmp/${IF}_router /tmp/${IF}up /tmp/${IF}_ip
 elif [ "${AF}" = "inet6" ]; then
 	if [ -s "/tmp/${IF}_defaultgwv6" ]; then
 		GW=$(head -n 1 /tmp/${IF}_defaultgwv6)
 	fi
-
 	if [ -n "${GW}" -a "${DEFAULTGW}" = "${GW}" ]; then
 		echo "Removing stale PPPoE gateway ${GW} on ${AF}" | logger -t ppp-linkdown
 		route delete -${AF} default "${GW}"
 	fi
 
-	if [ -f "/tmp/${IF}_nameserverv6" ]; then
-		for nameserver in $(cat /tmp/${IF}_nameserverv6); do
+	if [ -f "/var/etc/nameserver_v6${IF}" ]; then
+		# Remove old entries
+		for nameserver in $(cat /var/etc/nameserver_v6${IF}); do
 			route delete ${nameserver}
 		done
-		rm -f /tmp/${IF}_nameserverv6
+		rm -f /var/etc/nameserver_v6${IF}
 	fi
 
-	rm -f /tmp/${IF}_routerv6
+	# Do not remove gateway used during filter reload.
+	rm -f /tmp/${IF}_routerv6 /tmp/${IF}upv6 /tmp/${IF}_ipv6
 
 	# remove previous SLAAC addresses as the ISP may
 	# not respond to these in the upcoming session
@@ -55,13 +62,6 @@ elif [ "${AF}" = "inet6" ]; then
 	done
 fi
 
-/usr/local/sbin/configctl -d dns reload
-
-UPTIME=$(opnsense/scripts/interfaces/ppp-uptime.sh ${IF})
-if [ -n "${UPTIME}" -a -f "/conf/${IF}.log" ]; then
-	echo $(date -j +%Y.%m.%d-%H:%M:%S) ${UPTIME} >> /conf/${IF}.log
-fi
-
-rm -f /tmp/${IF}_uptime
+daemon -f /usr/local/opnsense/service/configd_ctl.py dns reload
 
 exit 0

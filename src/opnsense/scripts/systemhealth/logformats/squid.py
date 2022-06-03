@@ -25,12 +25,12 @@
 """
 import re
 import datetime
-from . import NewBaseLogFormat
+from . import BaseLogFormat
 squid_ext_timeformat = r'.*(\[\d{1,2}/[A-Za-z]{3}/\d{4}:\d{1,2}:\d{1,2}:\d{1,2} \+\d{4}\]).*'
 squid_timeformat = r'^(\d{4}/\d{1,2}/\d{1,2} \d{1,2}:\d{1,2}:\d{1,2}).*'
 
 
-class SquidLogFormat(NewBaseLogFormat):
+class SquidLogFormat(BaseLogFormat):
     def __init__(self, filename):
         super().__init__(filename)
         self._priority = 100
@@ -38,22 +38,22 @@ class SquidLogFormat(NewBaseLogFormat):
     def match(self, line):
         return self._filename.find('squid') > -1 and re.match(squid_timeformat, line) is not  None
 
-    @property
-    def timestamp(self):
-        tmp = re.match(squid_timeformat, self._line)
+    @staticmethod
+    def timestamp(line):
+        tmp = re.match(squid_timeformat, line)
         grp = tmp.group(1)
         return datetime.datetime.strptime(grp, "%Y/%m/%d %H:%M:%S").isoformat()
 
-    @property
-    def process_name(self):
+    @staticmethod
+    def process_name(line):
         return "squid"
 
-    @property
-    def line(self):
-        return self._line[19:].strip()
+    @staticmethod
+    def line(line):
+        return line[19:].strip()
 
 
-class SquidExtLogFormat(NewBaseLogFormat):
+class SquidExtLogFormat(BaseLogFormat):
     def __init__(self, filename):
         super().__init__(filename)
         self._priority = 120
@@ -61,24 +61,24 @@ class SquidExtLogFormat(NewBaseLogFormat):
     def match(self, line):
         return self._filename.find('squid') > -1 and re.match(squid_ext_timeformat, line) is not  None
 
-    @property
-    def timestamp(self):
-        tmp = re.match(squid_ext_timeformat, self._line)
+    @staticmethod
+    def timestamp(line):
+        tmp = re.match(squid_ext_timeformat, line)
         grp = tmp.group(1)
         return datetime.datetime.strptime(grp[1:].split()[0], "%d/%b/%Y:%H:%M:%S").isoformat()
 
-    @property
-    def process_name(self):
+    @staticmethod
+    def process_name(line):
         return "squid"
 
-    @property
-    def line(self):
-        tmp = re.match(squid_ext_timeformat, self._line)
+    @staticmethod
+    def line(line):
+        tmp = re.match(squid_ext_timeformat, line)
         grp = tmp.group(1)
         return line.replace(grp, '')
 
 
-class SquidJsonLogFormat(NewBaseLogFormat):
+class SquidJsonLogFormat(BaseLogFormat):
     def __init__(self, filename):
         super().__init__(filename)
         self._priority = 140
@@ -89,7 +89,6 @@ class SquidJsonLogFormat(NewBaseLogFormat):
     def match(self, line):
         return self._filename.find('squid') > -1 and line.find('"@timestamp"') > -1
 
-    @property
     def timestamp(self, line):
         tmp = line[line.find('"@timestamp"')+13:].split(',')[0].strip().strip('"')
         try:
@@ -98,10 +97,10 @@ class SquidJsonLogFormat(NewBaseLogFormat):
         except ValueError:
             return None
 
-    @property
-    def process_name(self):
+    @staticmethod
+    def process_name(line):
         return "squid"
 
-    @property
-    def line(self):
-        return self._line
+    @staticmethod
+    def line(line):
+        return line

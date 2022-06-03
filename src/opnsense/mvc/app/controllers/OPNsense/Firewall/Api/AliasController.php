@@ -60,7 +60,7 @@ class AliasController extends ApiMutableModelControllerBase
         }
         return $this->searchBase(
             "aliases.alias",
-            array('enabled', 'name', 'description', 'type', 'content', 'current_items', 'last_updated'),
+            array('enabled', 'name', 'description', 'type', 'content'),
             "name",
             $filter_funct
         );

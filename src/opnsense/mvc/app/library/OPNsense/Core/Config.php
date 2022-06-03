@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (C) 2015-2021 Deciso B.V.
+ * Copyright (C) 2015 Deciso B.V.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -102,9 +102,9 @@ class Config extends Singleton
         // copy attributes to @attribute key item
         foreach ($node->attributes() as $AttrKey => $AttrValue) {
             if (!isset($result['@attributes'])) {
-                $result['@attributes'] = [];
+                $result['@attributes'] = array();
             }
-            $result['@attributes'][$AttrKey] = (string)$AttrValue;
+            $result['@attributes'][$AttrKey] = $AttrValue->__toString();
         }
         // iterate xml children
         foreach ($node->children() as $xmlNode) {
@@ -136,23 +136,16 @@ class Config extends Singleton
                         $result[$xmlNodeName] = array();
                         $result[$xmlNodeName][] = $tmp;
                     }
-                    $result[$xmlNodeName][] = (string)$xmlNode;
+                    $result[$xmlNodeName][] = $xmlNode->__toString();
                 } else {
                     // single content item
                     if (isset($forceList[$xmlNodeName])) {
                         $result[$xmlNodeName] = array();
-                        if ((string)$xmlNode != null && trim((string)$xmlNode) !== '') {
-                            $result[$xmlNodeName][] = (string)$xmlNode;
+                        if ($xmlNode->__toString() != null && trim($xmlNode->__toString()) !== "") {
+                            $result[$xmlNodeName][] = $xmlNode->__toString();
                         }
                     } else {
-                        $result[$xmlNodeName] = (string)$xmlNode;
-                    }
-                    // copy attributes to xzy@attribute key item
-                    foreach ($xmlNode->attributes() as $AttrKey => $AttrValue) {
-                        if (!isset($result["${xmlNodeName}@attributes"])) {
-                            $result["${xmlNodeName}@attributes"] = [];
-                        }
-                        $result["${xmlNodeName}@attributes"][$AttrKey] = (string)$AttrValue;
+                        $result[$xmlNodeName] = $xmlNode->__toString();
                     }
                 }
             }
@@ -211,15 +204,6 @@ class Config extends Singleton
                 // copy xml attributes
                 foreach ($itemValue as $attrKey => $attrValue) {
                     $node->addAttribute($attrKey, $attrValue);
-                }
-                continue;
-            } elseif (strstr($itemKey, '@attributes') !== false) {
-                $origname = str_replace('@attributes', '', $itemKey);
-                if (count($node->$origname)) {
-                    // copy xml attributes
-                    foreach ($itemValue as $attrKey => $attrValue) {
-                        $node->$origname->addAttribute($attrKey, $attrValue);
-                    }
                 }
                 continue;
             } elseif (is_numeric($itemKey)) {
@@ -548,7 +532,7 @@ class Config extends Singleton
                     $xmlNode = @simplexml_load_file($filename, "SimpleXMLElement", LIBXML_NOERROR | LIBXML_ERR_NONE);
                     if (isset($xmlNode->revision)) {
                         $result[$filename] = $this->toArray(null, $xmlNode->revision);
-                        $result[$filename]['version'] = (string)$xmlNode->version;
+                        $result[$filename]['version'] = $xmlNode->version->__toString();
                         $result[$filename]['filesize'] = filesize($filename);
                     }
                 }

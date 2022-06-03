@@ -1,7 +1,8 @@
 <?php
 
 /*
- * Copyright (C) 2021 Deciso B.V.
+ * Copyright (C) 2019 Michael Muenz <m.muenz@gmail.com>
+ * Copyright (C) 2020 Deciso B.V.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,11 +27,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Cron\Migrations;
+namespace OPNsense\Unbound\Api;
 
-use OPNsense\Base\BaseModelMigration;
+use OPNsense\Base\ApiMutableModelControllerBase;
 
-<<<<<<<< HEAD:src/opnsense/mvc/app/controllers/OPNsense/Unbound/Api/SettingsController.php
 class SettingsController extends ApiMutableModelControllerBase
 {
     protected static $internalModelClass = '\OPNsense\Unbound\Unbound';
@@ -64,22 +64,5 @@ class SettingsController extends ApiMutableModelControllerBase
     public function toggleDotAction($uuid, $enabled = null)
     {
         return $this->toggleBase('dots.dot', $uuid, $enabled);
-========
-/**
- * migrate firmware jobs to a random delay action
- */
-class M1_0_3 extends BaseModelMigration
-{
-    public function run($model)
-    {
-        foreach ($model->jobs->job->iterateItems() as $node) {
-            if ($node->command == 'firmware changelog fetch') {
-                $node->command = 'firmware changelog cron';
-            }
-            if ($node->command == 'firmware probe') {
-                $node->command = 'firmware poll';
-            }
-        }
->>>>>>>> master:src/opnsense/mvc/app/models/OPNsense/Cron/Migrations/M1_0_3.php
     }
 }

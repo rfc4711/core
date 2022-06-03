@@ -55,13 +55,14 @@ if (empty($argument)) {
     $interface_real = $argument;
 }
 
+$ip = get_interface_ip($interface);
+
 if (!isset($config['interfaces'][$interface]['enable'])) {
-    log_error("Interface '{$interface}' ($interface_real) is disabled or empty, nothing to do.");
+    log_error("Interface '{$interface}' is disabled or empty, nothing to do.");
     return;
 }
 
 $interface_descr = convert_friendly_interface_to_friendly_descr($interface);
-$ip = get_interface_ip($interface);
 
 log_error("On (IP address: {$ip}) (interface: {$interface_descr}[{$interface}]) (real interface: {$interface_real}).");
 
@@ -70,9 +71,18 @@ log_error("On (IP address: {$ip}) (interface: {$interface_descr}[{$interface}]) 
  * to reconfigure an interface.  OpenVPN might be in tap(4)
  * mode and not have an IP address.
  */
-if (!is_ipaddr($ip) && substr($interface_real, 0, 4) != 'ovpn') {
+if ((empty($ip) || !is_ipaddr($ip)) && substr($interface_real, 0, 4) != 'ovpn') {
     log_error("Failed to detect IP for {$interface_descr}[{$interface}]");
     return;
+}
+
+$configip = $config['interfaces'][$interface]['ipaddr'];
+
+$cacheip_file = "/var/db/{$interface}_cacheip";
+$ip_file = "/var/db/{$interface}_ip";
+
+if (is_ipaddr($ip)) {
+    @file_put_contents($ip_file, $ip);
 }
 
 interfaces_vips_configure(false, $interface);
@@ -141,25 +151,22 @@ foreach (array_keys($restartifs) as $ifname) {
  */
 ifgroup_setup();
 
-$cacheip_file = "/tmp/{$interface_real}_oldip";
-$cacheip = trim(@file_get_contents($cacheip_file));
+$cacheip = @file_get_contents($cacheip_file);
 
-if ($ip != $cacheip || !is_ipaddr($config['interfaces'][$interface]['ipaddr'])) {
+if (!is_ipaddr($cacheip) || $ip != $cacheip || !is_ipaddr($configip)) {
+    @unlink($cacheip_file);
+
     system_routing_configure(false, $interface);
     plugins_configure('monitor');
-    filter_configure_sync();
-
-    if (isset($config['system']['ip_change_kill_states'])) {
-        /* XXX maybe eventually ip_change_kill_states should be removed */
-        log_error('IP address renew, killing all previous states');
-        mwexec('/sbin/pfctl -Fs');
-    } else if (is_ipaddr($cacheip) && $ip != $cacheip) {
+    filter_configure_sync(false, isset($config['system']['ip_change_kill_states']));
+    if (is_ipaddr($cacheip) && $ip != $cacheip && !isset($config['system']['ip_change_kill_states'])) {
         log_error("IP address change detected, killing states of old ip $cacheip");
-        mwexecf('/sbin/pfctl -k 0.0.0.0/0 -k %s', $cacheip);
-        mwexecf('/sbin/pfctl -k %s', $cacheip);
+        mwexec('/sbin/pfctl -k ' . $cacheip);
     }
 
-    @file_put_contents($cacheip_file, $ip . PHP_EOL);
+    if (is_ipaddr($ip)) {
+        @file_put_contents($cacheip_file, $ip);
+    }
 
     plugins_configure('vpn', false, array($interface));
     plugins_configure('newwanip', false, array($interface));

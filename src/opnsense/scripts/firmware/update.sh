@@ -38,8 +38,7 @@ mkfifo ${PIPEFILE}
 
 echo "***GOT REQUEST TO UPDATE***" >> ${LOCKFILE}
 
-# figure out if we are crossing ABIs
-if [ "$(opnsense-version -a)" != "$(opnsense-version -x)" ]; then
+if [ "${CMD}" = "force" ]; then
 	DO_FORCE="-f"
 fi
 
@@ -62,7 +61,7 @@ fi
 
 # if we can update base, we'll do that as well
 ${TEE} ${LOCKFILE} < ${PIPEFILE} &
-if opnsense-update ${DO_FORCE} -bk -c > ${PIPEFILE} 2>&1; then
+if opnsense-update ${DO_FORCE} -c > ${PIPEFILE} 2>&1; then
 	${TEE} ${LOCKFILE} < ${PIPEFILE} &
 	if opnsense-update ${DO_FORCE} -bk > ${PIPEFILE} 2>&1; then
 		echo '***REBOOT***' >> ${LOCKFILE}
